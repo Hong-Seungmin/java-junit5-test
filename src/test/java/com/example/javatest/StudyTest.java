@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class StudyTest {
@@ -37,5 +38,11 @@ class StudyTest {
         System.out.println("message = " + message);
     }
 
-
+    @DisplayName("스터디 만들기2")
+    @ParameterizedTest(name = "{index} {displayName} message={0}")
+    @CsvSource({"10, '자바 스터디'", "20, 스프링"})
+    void parameterizedTest2(Integer limit, String name) {
+        System.out.println("limit = " + limit);
+        System.out.println("name = " + name);
+    }
 }
