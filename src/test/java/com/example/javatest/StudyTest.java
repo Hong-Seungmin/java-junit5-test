@@ -1,25 +1,29 @@
 package com.example.javatest;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.RepetitionInfo;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class StudyTest {
 
+    int value = 0;
+
+    @Order(2)
     @FastTest
     @DisplayName("스터디 만들기 fast")
     void create_new_study() {
 
+        System.out.println(value++);
         Study actual = new Study(10);
     }
 
+    @Order(1)
     @SlowTest
     @DisplayName("스터디 만들기 slow")
     void create_new_study_again() {
 
+        System.out.println(value++);
         Study actual = new Study(10);
     }
 
