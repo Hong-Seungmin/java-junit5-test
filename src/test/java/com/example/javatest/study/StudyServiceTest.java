@@ -2,65 +2,102 @@ package com.example.javatest.study;
 
 import com.example.javatest.domain.Member;
 import com.example.javatest.domain.Study;
+import com.example.javatest.domain.StudyStatus;
 import com.example.javatest.member.MemberService;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.io.File;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 
+@SpringBootTest
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
+@Testcontainers
+@Slf4j
+@ContextConfiguration(initializers = StudyServiceTest.ContainerPropertyInitializer.class)
 class StudyServiceTest {
 
-    @Mock
-    MemberService memberService;
+    @Mock MemberService memberService;
 
-    @Mock
+    @Autowired
     StudyRepository studyRepository;
 
-    @Test
-    void createStudyService() {
+    @Value("${container.port}") int port;
 
+    @JavaDispatcher.Container
+    static DockerComposeContainer composeContainer =
+            new DockerComposeContainer(new File("src/test/resources/docker-compose.yml"))
+                    .withExposedService("study-db", 5432);
+
+    @Test
+    void createNewStudy() {
+        System.out.println("========");
+        System.out.println(port);
+
+        // Given
         StudyService studyService = new StudyService(memberService, studyRepository);
         assertNotNull(studyService);
 
         Member member = new Member();
         member.setId(1L);
-        member.setEmail("hong@gmail.com");
+        member.setEmail("keesun@email.com");
 
-        Study study = new Study(10, "java");
+        Study study = new Study(10, "테스트");
 
-        when(memberService.findById(1L)).thenReturn(Optional.of(member));
-        when(studyRepository.save(study)).thenReturn(study);
+        given(memberService.findById(1L)).willReturn(Optional.of(member));
 
-
-        when(memberService.findById(1L)).thenReturn(Optional.of(member));
-        when(memberService.findById(2L)).thenReturn(null);
-
-
-        Optional<Member> findById = memberService.findById(1L);
-        assertEquals("hong@gmail.com", findById.get().getEmail());
-        Optional<Member> findById2 = memberService.findById(2L);
-        assertNull(findById2);
+        // When
         studyService.createNewStudy(1L, study);
 
-        doThrow(new IllegalArgumentException()).when(memberService).validate(3L);
-
-        assertThrows(IllegalArgumentException.class, ()-> memberService.validate(3L));
-
-        Optional<Member> optionalMember = memberService.findById(1L);
-        memberService.validate(2L);
-
-        assertNotNull(studyService);
-
-        verify(memberService,times(1)).notify(study);
-//        verify(memberService, never()).validate(any());
-
+        // Then
+        assertEquals(1L, study.getOwnerId());
+        then(memberService).should(times(1)).notify(study);
+        then(memberService).shouldHaveNoMoreInteractions();
     }
 
+    @DisplayName("다른 사용자가 볼 수 있도록 스터디를 공개한다.")
+    @Test
+    void openStudy() {
+        // Given
+        StudyService studyService = new StudyService(memberService, studyRepository);
+        Study study = new Study(10, "더 자바, 테스트");
+        assertNull(study.getOpenedDateTime());
 
+        // When
+        studyService.openStudy(study);
+
+        // Then
+        assertEquals(StudyStatus.OPENED, study.getStatus());
+        assertNotNull(study.getOpenedDateTime());
+        then(memberService).should().notify(study);
+    }
+
+    static class ContainerPropertyInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+
+        @Override
+        public void initialize(ConfigurableApplicationContext context) {
+            TestPropertyValues.of("container.port=" + composeContainer.getServicePort("study-db", 5432))
+                              .applyTo(context.getEnvironment());
+        }
+    }
 }
