@@ -5,6 +5,7 @@ import com.example.javatest.domain.Study;
 import com.example.javatest.domain.StudyStatus;
 import com.example.javatest.member.MemberService;
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.internal.bytebuddy.utility.dispatcher.JavaDispatcher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
